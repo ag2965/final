@@ -1,0 +1,72 @@
+---
+title: "Untitled"
+author: "Aakriti Shukla"
+date: "2022-11-21"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+library(tidyverse)
+library(patchwork)
+library(plotly)
+
+knitr::opts_chunk$set(
+echo = TRUE,
+warning = FALSE,
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%")
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis")
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+
+```{r}
+nypd_shooting_df = 
+  read_csv("data/nypd_shooting_data.csv") %>%
+  janitor::clean_names() %>%
+  separate(col = occur_date, into = c("month", "day", "year"), sep = "/") %>% 
+  separate(col = occur_time, into = c("hour", "minute", "second"), sep = ":") %>%
+  mutate(across(where(is.character), tolower),
+         month = as.numeric(month),
+         month_name = recode(month, "1" = "january", "2" = "february", "3" = "march", "4" = "april", "5" = "may", "6" = "june", "7" = "july", "8" = "august", "9" = "september", "10" = "october", "11" = "november", "12" = "december"),
+         day = as.numeric(day),
+         year = as.numeric(year), 
+         hour = as.numeric(hour),
+         minute = as.numeric(minute), 
+         second = as.numeric(second),
+         minute_calc = hour * 60 + minute,
+         boro = as.factor(boro), 
+         boro = fct_relevel(boro, "manhattan", "brooklyn", "bronx", "queens", "staten island")) %>%
+  select(incident_key, year, month_name, month, day, hour, minute, second, minute_calc, everything())
+```
+```{r}
+nypd_shooting_df %>%
+  mutate(text_label = str_c("Month", month_name, "Year", year, "Victim's Age Group", vic_age_group, "Perpetrator's Age Group", perp_age_group)) %>% 
+  plot_ly(
+    x = ~latitude, y = ~longitude, type = "scatter", mode = "markers",
+    color = ~year, text = ~text_label, alpha = 0.5)
+```
+
+```{r}
+nypd_shooting_df %>% 
+  mutate(boro = fct_reorder(boro, year)) %>% 
+  plot_ly(y = ~year, color = ~boro, type = "box", colors = "viridis")
+```
+
+```{r}
+nypd_shooting_df %>% 
+  count(boro) %>% 
+  mutate(boro = fct_reorder(boro, n)) %>% 
+  plot_ly(x = ~boro, y = ~n, color = ~boro, type = "bar", colors = "viridis")
+```
+
